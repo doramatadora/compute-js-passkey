@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>Passwordless login on Fastly's Compute@Edge</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://unpkg.com/@simplewebauthn/browser"></script>
+  <script src="auth.js" async module></script>
+  <!--  <meta http-equiv="content-security-policy"
+    content="default-src 'none'; font-src 'self' data:; img-src 'self' data:; style-src 'self' data:; media-src 'self' data:; script-src 'unsafe-inline' data:;" /> -->
+</head>
+
+<body>
+  <main>
+    <section id="passkeySupported">
+      <h1>🔒 Look ma, no password!</h1>
+
+      <p>This is a demo, so you can register keys under any username.</p>
+      <form action="" method="post" id="passkeyForm">
+        <div class="input">
+          <label for="name">name</label>
+          <input type="text" id="name" name="name" placeholder="Example username" required />
+        </div>
+        <button type="submit" id="register">1. Register passkey</button>
+        <button type="submit" id="authenticate">2. Authenticate</button>
+        <p>
+          Welcome to a passwordless world, powered by <a href="https://passkeys.dev/" target="_blank">passkeys</a> and
+          <a href="https://www.fastly.com/products/edge-compute" target="_blank">Fastly's Compute@Edge</a>.
+        </p>
+        <h2>No origins, no databases, and no infrastructure</h2>
+        <p>
+          Everything happens at the network's edge, so you don't have to worry about scaling or latency... or data
+          storage, if using <a
+            href="https://www.fastly.com/blog/introducing-object-store-enabling-powerful-applications-at-the-edge"
+            target="_blank">Fastly's KV Store</a> to store passkeys and persist state.
+        </p>
+      </form>
+    </section>
+    <section id="passkeyNotSupported">
+      <h1>Uh-oh 🙀</h1>
+      <p>
+        Use a <a href="https://caniuse.com/mdn-api_publickeycredential" target="_blank">compatible browser</a> to enjoy
+        a passwordless world, powered by <a href="https://passkeys.dev/" target="_blank">passkeys</a> and <a
+          href="https://www.fastly.com/products/edge-compute" target="_blank">Fastly's Compute@Edge</a>.</b>
+      </p>
+    </section>
+  </main>
+</body>
+
+</html>

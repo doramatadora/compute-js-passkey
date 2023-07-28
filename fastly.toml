@@ -1,0 +1,34 @@
+# This file describes a Fastly Compute@Edge package. To learn more visit:
+# https://developer.fastly.com/reference/fastly-toml/
+
+authors = ["dora@kalneus.com"]
+description = ""
+language = "javascript"
+manifest_version = 3
+name = "compute-js-passkey"
+service_id = "PsIwJu8eh38us5cCC7HIA3"
+
+[local_server]
+
+  [local_server.backends]
+
+  [local_server.kv_stores]
+
+    [[local_server.kv_stores.passkey-users]]
+      file = "./setup/user.json"
+      key = "dora"
+
+[scripts]
+  build = "npm run build"
+
+[setup]
+
+  [setup.kv_stores]
+
+    [setup.kv_stores.passkey-users]
+      description = "Stores passkeys and persists state for the passkey demo"
+
+      [setup.kv_stores.passkey-users.items]
+
+        [setup.kv_stores.passkey-users.items.dora]
+          value = "{\"id\":\"dora\",\"name\":\"dora\",\"devices\":[]}"
