@@ -42,7 +42,7 @@ if (
               body: JSON.stringify(attResp)
             }
           )
-          console.log({ regResp })
+          //console.log({ regResp })
           // Display outcome.
           if (regResp.ok === true) {
             const { verified } = await regResp.json()
@@ -56,10 +56,10 @@ if (
           e.preventDefault()
           const userName = USER_NAME.value
           const authStartResp = await fetch(`/authentication/start/${userName}`)
-          const authenticationOptionsJSON = await authStartResp.json()
-          console.log({ authenticationOptionsJSON })
+          const authOpts = await authStartResp.json()
+          console.log({ authOpts })
           // Start WebAuthn authentication.
-          const assResp = await startAuthentication(authenticationOptionsJSON)
+          const assResp = await startAuthentication(authOpts)
           console.log({ assResp })
           // Submit response.
           const authResp = await fetch(

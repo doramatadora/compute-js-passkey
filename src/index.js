@@ -1,7 +1,6 @@
 /// <reference types="@fastly/js-compute" />
 
-import base64url from 'base64url'
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid'
 import { includeBytes } from 'fastly:experimental'
 import { KVStore } from 'fastly:kv-store'
 import { Router } from '@fastly/expressly'
@@ -25,8 +24,11 @@ const KV_STORE = 'passkey-users'
 
 // ✨ WEBAUTHN RELYING PARTY STUFF ✨
 const RP_NAME = 'Passkeys@Edge'
-const RP_ID = 'passkeys.edgecompute.app'
-const ORIGIN = `https://${RP_ID}`
+//const RP_ID = 'passkeys.edgecompute.app'
+//const ORIGIN = `https://${RP_ID}`
+
+const RP_ID = 'localhost'
+const ORIGIN = `http://${RP_ID}:7676`
 
 const router = new Router()
 
@@ -53,13 +55,15 @@ router.get('/', (_, res) => res.send(indexPage))
 router.get('/registration/start/:userName', async (req, res) => {
   // Get user from KVStore if exists.
   const users = new KVStore(KV_STORE)
-  const user = await users
-    .get(req.params.userName)
-    .then(entry => (entry ? entry.json() : {
-      id: uuidv4(),
-      name: req.params.userName,
-      devices: []
-    }))
+  const user = await users.get(req.params.userName).then(entry =>
+    entry
+      ? entry.json()
+      : {
+          id: uuidv4(),
+          name: req.params.userName,
+          devices: []
+        }
+  )
 
   const options = generateRegistrationOptions({
     rpName: RP_NAME,
@@ -80,8 +84,7 @@ router.get('/registration/start/:userName', async (req, res) => {
       // old name persists in the options passed to `navigator.credentials.create()`.
       residentKey: 'required',
       userVerification: 'preferred'
-    },
-    supportedAlgorithmIDs: [-7, -257]
+    }
   })
 
   // Temporarily remember this value for verification.
@@ -95,12 +98,9 @@ router.get('/registration/start/:userName', async (req, res) => {
 router.post('/registration/finish/:userName', async (req, res) => {
   // The user needs to exist in KV Store at this point.
   const users = new KVStore(KV_STORE)
-  const user = await users
-    .get(req.params.userName)
-    .then(entry => entry.json())
+  const user = await users.get(req.params.userName).then(entry => entry.json())
 
   const body = await req.json()
-  console.log({body})
 
   const expectedChallenge = user.currentChallenge
 
@@ -111,9 +111,10 @@ router.post('/registration/finish/:userName', async (req, res) => {
       expectedChallenge: `${expectedChallenge}`,
       expectedOrigin: ORIGIN,
       expectedRPID: RP_ID,
-      requireUserVerification: true
+      requireUserVerification: false
     })
   } catch (e) {
+    console.error("during finish");
     console.error(e)
     return res.withStatus(400).json({ error: e.message })
   }
@@ -130,8 +131,8 @@ router.post('/registration/finish/:userName', async (req, res) => {
     if (!existingDevice) {
       // Add the returned device to the user's list of devices.
       user.devices.push({
-        credentialPublicKey,
-        credentialID,
+        credentialPublicKey: isoUint8Array.toHex(credentialPublicKey),
+        credentialID: isoUint8Array.toHex(credentialID),
         counter,
         transports: body.response.transports
       })
@@ -140,8 +141,6 @@ router.post('/registration/finish/:userName', async (req, res) => {
 
   delete user.currentChallenge
   await users.put(user.name, JSON.stringify(user))
-
-  res.json({ verified })
 })
 
 // ✨ AUTHENTICATION ✨
@@ -149,76 +148,79 @@ router.post('/registration/finish/:userName', async (req, res) => {
 router.get('/authentication/start/:userName', async (req, res) => {
   // The user needs to exist in KV Store at this point.
   const users = new KVStore(KV_STORE)
-  const user = await users
-    .get(req.params.userName)
-    .then(entry => entry.json())
+  const user = await users.get(req.params.userName).then(entry => entry.json())
 
   const options = generateAuthenticationOptions({
     timeout: 60000,
     allowCredentials: user.devices.map(dev => ({
-      id: dev.credentialID,
+      id: isoUint8Array.fromHex(dev.credentialID),
       type: 'public-key',
-      transports: dev.transports,
+      transports: dev.transports
     })),
-    userVerification: 'required',
-    rpID: RP_ID,
-  });
+    userVerification: 'preferred',
+    rpID: RP_ID
+  })
 
   // Temporarily remember this value for verification.
   user.currentChallenge = options.challenge
   await users.put(user.name, JSON.stringify(user))
-
-  res.json(options);
-});
+  res.json(options)
+})
 
 // Verify authentication response.
 router.post('/authentication/finish/:userName', async (req, res) => {
   // The user needs to exist in KV Store at this point.
   const users = new KVStore(KV_STORE)
-  const user = await users
-    .get(req.params.userName)
-    .then(entry => entry.json())
+  const user = await users.get(req.params.userName).then(entry => entry.json())
 
   const body = await req.json()
-  console.log({body})
+  const bodyCredIDBuffer = new Buffer(body.rawId, 'base64')
 
-  const expectedChallenge = user.currentChallenge
-
-
-  const bodyCredIDBuffer = base64url.toBuffer(body.rawId);
   // Find an authenticator matching the credential ID.
-  const dbAuthenticator = user.devices.find((dev) => isoUint8Array.areEqual(dev.credentialID, bodyCredIDBuffer));
+  const uAuthenticator = user.devices.find(dev =>
+    isoUint8Array.areEqual(
+      isoUint8Array.fromHex(dev.credentialID),
+      bodyCredIDBuffer
+    )
+  )
 
-  if (!dbAuthenticator) {
-    return res.withStatus(400).json({ error: 'Authenticator is not registered with this site' });
+  if (!uAuthenticator) {
+    return res
+      .withStatus(400)
+      .json({ error: 'Authenticator is not registered with this site' })
   }
 
   let verification
   try {
     verification = await verifyAuthenticationResponse({
       response: body,
-      expectedChallenge: `${expectedChallenge}`,
-      expectedOrigin,
+      expectedChallenge: user.currentChallenge,
+      expectedOrigin: ORIGIN,
       expectedRPID: RP_ID,
-      authenticator: dbAuthenticator,
-      requireUserVerification: true,
-    });
+      authenticator: {
+        credentialPublicKey: isoUint8Array.fromHex(uAuthenticator.credentialPublicKey),
+        credentialID: isoUint8Array.fromHex(uAuthenticator.credentialID),
+        counter:  uAuthenticator.counter,
+        transports: uAuthenticator.transports,
+      },
+      requireUserVerification: false
+    })
   } catch (e) {
     console.error(e)
     return res.withStatus(400).json({ error: e.message })
   }
 
-  const { verified, authenticationInfo } = verification;
+  const { verified, authenticationInfo } = verification
 
   if (verified) {
     // Update the authenticator's counter. The parent (user) object will be updated in KV Store.
-    dbAuthenticator.counter = authenticationInfo.newCounter;
+    uAuthenticator.counter = authenticationInfo.newCounter
   }
 
   delete user.currentChallenge
   await users.put(user.name, JSON.stringify(user))
 
-  res.json({ verified });
-});
+  res.json({ verified })
+})
 
 router.listen()
