@@ -114,7 +114,6 @@ router.post('/registration/finish/:userName', async (req, res) => {
       requireUserVerification: false
     })
   } catch (e) {
-    console.error("during finish");
     console.error(e)
     return res.withStatus(400).json({ error: e.message })
   }
