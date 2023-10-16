@@ -6,7 +6,7 @@ description = ""
 language = "javascript"
 manifest_version = 3
 name = "compute-js-passkey"
-service_id = "PsIwJu8eh38us5cCC7HIA3"
+service_id = "jdbrKo0AqTBagzMODKtnC4"
 
 [local_server]
 
@@ -14,7 +14,7 @@ service_id = "PsIwJu8eh38us5cCC7HIA3"
 
   [local_server.kv_stores]
 
-    [[local_server.kv_stores.passkey-users]]
+    [[local_server.kv_stores.passkey-data]]
       file = "./setup/user.json"
       key = "dora"
 
@@ -25,10 +25,10 @@ service_id = "PsIwJu8eh38us5cCC7HIA3"
 
   [setup.kv_stores]
 
-    [setup.kv_stores.passkey-users]
+    [setup.kv_stores.passkey-data]
       description = "Stores passkeys and persists state for the passkey demo"
 
-      [setup.kv_stores.passkey-users.items]
+      [setup.kv_stores.passkey-data.items]
 
-        [setup.kv_stores.passkey-users.items.dora]
+        [setup.kv_stores.passkey-data.items.dora]
           value = "{\"id\":\"dora\",\"name\":\"dora\",\"devices\":[]}"

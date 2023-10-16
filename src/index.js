@@ -20,7 +20,7 @@ const indexPage = includeBytes('./src/browser/index.html')
 const authScript = includeBytes('./src/browser/auth.js')
 const styleSheet = includeBytes('./src/browser/style.css')
 
-const KV_STORE = 'passkey-users'
+const KV_STORE = 'passkey-data'
 
 // ✨ WEBAUTHN RELYING PARTY STUFF ✨
 const RP_NAME = 'Passkeys@Edge'
